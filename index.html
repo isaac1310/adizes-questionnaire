@@ -68,6 +68,9 @@
   /* ---------- welcome ---------- */
   #sWelcome h1{font-size:32px;margin:4px 0 6px}
   .privacy{font-size:14px;color:var(--muted);margin:6px 0 0}
+  .privlink{background:none;border:0;padding:0 2px;min-height:32px;color:var(--green-dark);font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+  .privmore{font-size:14px;line-height:1.5;color:var(--muted-strong);background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:6px}
+  .privmore a{color:var(--green-dark);font-weight:700}
   .howto{background:var(--bg);border-radius:12px;padding:14px;margin-top:14px;display:grid;gap:10px}
   .howto .ttl{font-weight:800;color:var(--brown);font-size:16px}
   .howto .demo{display:grid;gap:6px}
@@ -248,11 +251,17 @@
   <section id="sWelcome">
     <span class="workshop" id="wsName"></span>
     <h1 tabindex="-1">סגנונות החלטה</h1>
-    <p class="intro">שאלון קצר על איך אתם פועלים בעבודה. אין תשובות נכונות – עִנו לפי מה שבאמת מתאים לכם.</p>
+    <p class="intro">שאלון קצר על איך אתם פועלים בעבודה. אין תשובות נכונות – עִנו לפי איך שאתם <strong>באמת</strong> פועלים, לא לפי מה שנראה לכם שצריך.</p>
     <div class="card">
       <label for="name">השם שלכם</label>
       <input id="name" type="text" autocomplete="name" maxlength="40" placeholder="שם פרטי ומשפחה" oninput="checkName()" onkeydown="if(event.key==='Enter'&&!$('startBtn').disabled)start()">
-      <p class="privacy">השם והתוצאות מוצגים רק למנחה הסדנה.</p>
+      <p class="privacy">השם והתוצאות מוצגים רק למנחה הסדנה.
+        <button type="button" class="privlink" aria-expanded="false" aria-controls="privMore" onclick="const o=$('privMore').classList.toggle('hidden');this.setAttribute('aria-expanded',!o)">פרטיות ומחיקה</button></p>
+      <div class="privmore hidden" id="privMore">
+        את השאלון מפעילה רענן בשטח בע"מ, לצורך הכנת הסדנה בלבד. נשמרים השם, התשובות והציונים.
+        הם מוצגים רק למנחה הסדנה ולא מועברים לאחרים (גם לא למעסיק).
+        לעיון בנתונים או לבקשת מחיקה: <a href="tel:+972545670690" dir="ltr" style="white-space:nowrap">054-5670690</a>.
+      </div>
       <div class="howto">
         <span class="ttl">איך עונים?</span>
         <span style="font-size:15px;line-height:1.4">לכל משפט 4 השלמות. הקישו עליהן <strong>לפי הסדר</strong> – מהכי מתאים להכי פחות:</span>
@@ -409,10 +418,14 @@ const Q = [
 ];
 const TYPES = ["P","A","E","I"], POINTS = [8,4,2,1];
 const RANK_TXT = ["ראשון","שני","שלישי","רביעי"], RANK_ORD = ["הראשון","השני","השלישי","הרביעי"];
-/* Fixed shuffled display order per row, so P is not always first */
-const PERM = Q.map((_,i)=>{const a=[0,1,2,3];let s=i*9301+49297;for(let j=3;j>0;j--){s=(s*9301+49297)%233280;const k=Math.floor(s/233280*(j+1));[a[j],a[k]]=[a[k],a[j]];}return a;});
+/* Fixed display order per row (0=P 1=A 2=E 3=I), built from a balanced 4×4 Latin square:
+   every type sits in every screen position exactly 5 times over the 20 rows, so someone who taps
+   top-to-bottom (or bottom-to-top) on every row gets a flat 75/75/75/75 instead of a fake profile. */
+const PERM = [[2,3,1,0],[0,1,3,2],[3,0,2,1],[1,2,0,3],[1,2,0,3],[3,0,2,1],[0,1,3,2],[2,3,1,0],[3,0,2,1],[2,3,1,0],
+              [1,2,0,3],[0,1,3,2],[0,1,3,2],[1,2,0,3],[2,3,1,0],[3,0,2,1],[2,3,1,0],[3,0,2,1],[0,1,3,2],[1,2,0,3]];
 
 let name = "", qi = 0, answers = Q.map(()=>[]), submitted = null, advTimer = null;
+let tapLockUntil = 0;   // after the row changes, ignore taps briefly so a fast tap doesn't land on the new row
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const hhmm = () => new Date().toTimeString().slice(0,5);
@@ -464,6 +477,7 @@ function renderQ(){
   $("nextBtn").textContent = n !== 4 ? `עוד ${3-n} לדירוג` : qi === Q.length-1 ? "סיום" : "הבא";
 }
 function pick(t){
+  if (Date.now() < tapLockUntil) return;
   clearTimeout(advTimer);
   const ans = answers[qi], r = ans.indexOf(t);
   if (r >= 0) ans.splice(r);               // tap a ranked item: undo it and anything after
@@ -476,7 +490,7 @@ function go(d){
   clearTimeout(advTimer);
   if (d>0 && answers[qi].length!==4) return;
   if (d>0 && qi === Q.length-1){ $("cName").textContent = name; $("sendErr").classList.add("hidden"); return show("sConfirm"); }
-  qi += d; save(); renderQ(); window.scrollTo(0,0);
+  qi += d; tapLockUntil = Date.now() + 300; save(); renderQ(); window.scrollTo(0,0);
 }
 function score(ans){ const s={P:0,A:0,E:0,I:0}; ans.forEach(row=>row.forEach((t,r)=>s[TYPES[t]]+=POINTS[r])); return s; }
 function code(s){ return TYPES.map(t=> s[t]>=85 ? t : s[t]>=60 ? t.toLowerCase() : "-").join(""); }
@@ -639,7 +653,35 @@ function resume(){
   if (name){ show("sQuestion"); renderQ(); } else show("sWelcome");
 }
 
+/* ---------- scoring self-test: runs on every load; a failure shows in red in the mock bar ---------- */
+function selfTest(){
+  const fails = [], eq = (a,b,msg) => { if (JSON.stringify(a)!==JSON.stringify(b)) fails.push(`${msg}: got ${JSON.stringify(a)}`); };
+  const pick = s => ({P:s.P,A:s.A,E:s.E,I:s.I});
+  // 1. always ranking P > A > E > I gives 160/80/40/20
+  eq(pick(score(Q.map(()=>[0,1,2,3]))), {P:160,A:80,E:40,I:20}, "always P first");
+  // 2. tapping top-to-bottom (or bottom-to-top) on every row gives a flat 75 each
+  eq(pick(score(PERM.map(p=>p.slice()))), {P:75,A:75,E:75,I:75}, "top-to-bottom tapper");
+  eq(pick(score(PERM.map(p=>p.slice().reverse()))), {P:75,A:75,E:75,I:75}, "bottom-to-top tapper");
+  // 3. display order: every row is a full ordering, every type in every position exactly 5 times
+  if (PERM.length!==Q.length || PERM.some(p=>[...p].sort().join()!=="0,1,2,3")) fails.push("PERM row is not a full ordering");
+  [0,1,2,3].forEach(t=>[0,1,2,3].forEach(pos=>{ const n = PERM.filter(p=>p[pos]===t).length; if (n!==5) fails.push(`type ${TYPES[t]} at position ${pos+1}: ${n}×`); }));
+  // 4. 500 random submissions: each totals 300, every score between 20 and 160
+  const r = rnd(42);
+  for (let k=0;k<500;k++){
+    const s = score(Q.map(()=>[0,1,2,3].map(t=>[t,r()]).sort((a,b)=>a[1]-b[1]).map(x=>x[0])));
+    const tot = s.P+s.A+s.E+s.I;
+    if (tot!==300 || TYPES.some(t=>s[t]<20||s[t]>160)){ fails.push(`random #${k}: ${JSON.stringify(s)}`); break; }
+  }
+  // 5. code thresholds
+  eq(code({P:85,A:84,E:60,I:59}), "Pae-", "code thresholds");
+  if (fails.length){ console.error("Self-test FAILED", fails);
+    const m = document.querySelector(".mock"); m.style.background = "#8A1F11"; m.insertAdjacentText("beforeend", " · ⚠ בדיקה עצמית נכשלה (ראו קונסול)"); }
+  else console.info("Self-test passed (scoring, display order, totals, thresholds)");
+  return fails;
+}
+
 $("wsName").textContent = WORKSHOP;
+selfTest();
 load(); resume();
 </script>
 </body>
