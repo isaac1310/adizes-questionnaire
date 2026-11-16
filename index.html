@@ -8,15 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --brown:#591900; --green:#76B043; --green-dark:#2F6B1F; --green-tint:#EEF5E6;
-    --bg:#F7F8F3; --card:#FFFFFF; --ink:#2B2118; --muted:#6E6258; --line:#E3E1D8;
-    --blue:#2C6DB5; --radius:14px;
+    --brown:#591900; --green:#76B043; --green-dark:#2F6B1F; --green-tint:#EEF5E6; --green-bar:#3F7F27;
+    --bg:#F7F8F3; --card:#FFFFFF; --ink:#2B2118; --muted:#6E6258; --muted-strong:#5E534A; --line:#E3E1D8;
+    --ring:#C9C6BA; --dot-next:#C9D8B8; --radius:14px;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
   body{font-family:"Assistant",system-ui,sans-serif;background:var(--bg);color:var(--ink);
        font-size:17px;line-height:1.45;-webkit-tap-highlight-color:transparent;min-height:100vh;display:flex;flex-direction:column}
   button{font:inherit;cursor:pointer}
+  h1:focus{outline:none}
   .wrap{width:100%;max-width:560px;margin:0 auto;padding:0 16px}
 
   /* mockup switcher (mockup only) */
@@ -24,105 +25,170 @@
   .mock button{background:none;border:1px solid #555;color:#ddd;border-radius:999px;padding:2px 10px;margin:0 3px}
   .mock button.on{background:#fff;color:#222;border-color:#fff}
 
-  /* header from template */
-  header{background:#75ae46 url(assets/adizes-header.jpg) center/cover no-repeat;height:120px}
-  /* One fixed header height on every screen: nothing moves under the finger, and the full logo (with tagline) shows */
+  /* ---------- headers ---------- */
+  /* full image header: welcome + moderator login only */
+  .hero{background:#75ae46 url(assets/adizes-header.jpg) center/cover no-repeat;height:132px}
+  /* compact bar: every other screen. #3F7F27 gives white text 4.9:1 (brand #75AE46 would be 2.7:1) */
+  .bar-head{display:none;position:sticky;top:0;z-index:20;height:56px;background:var(--green-bar);color:#fff;
+            align-items:center;justify-content:space-between;padding:0 16px}
+  .bar-head .t{font-weight:800;font-size:18px}
+  .bar-head .brand{direction:ltr;font-weight:700;font-size:13px;letter-spacing:.1em;opacity:.92}
+  .bar-head .live{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px}
+  .bar-head .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.6s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  body.compact .hero{display:none}
+  body.compact .bar-head{display:flex}
+  body.nofooter footer{display:none}
 
   main{flex:1;padding:20px 0 28px}
-  h1{color:var(--brown);font-size:28px;font-weight:800;margin:4px 0 8px}
-  h2{color:var(--brown);font-size:22px;margin:0 0 8px}
+  body.compact main{padding-top:16px}
+  h1{color:var(--brown);font-size:28px;font-weight:800;margin:4px 0 8px;line-height:1.15}
+  h2{color:var(--brown);font-size:20px;font-weight:800;margin:0 0 8px}
   p{margin:0 0 12px}
   .muted{color:var(--muted)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;
+  .intro{color:var(--muted-strong);font-size:17px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;
         box-shadow:0 1px 2px rgba(89,25,0,.04),0 4px 14px rgba(89,25,0,.05)}
-  .eyebrow{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--green-dark);direction:ltr;text-align:right;margin:0}
-  .privacy{font-size:14px;color:var(--muted);margin:6px 0 0}
-  .notme{display:block;margin:14px auto 0;text-align:center}
   .workshop{display:inline-block;background:var(--green-tint);color:var(--green-dark);font-weight:700;
             border-radius:999px;padding:3px 12px;font-size:14px;margin-bottom:10px}
-  label{display:block;font-weight:700;margin:14px 0 6px}
+  label{display:block;font-weight:700;margin:0 0 6px}
   input[type=text],input[type=password]{width:100%;font:inherit;font-size:18px;padding:12px 14px;border:1.5px solid var(--line);
             border-radius:10px;background:#fff}
-  input:focus{outline:none;border-color:var(--green-dark);box-shadow:0 0 0 3px rgba(118,176,67,.25)}
-  .btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;font-size:18px;font-weight:700;
+  input:focus,textarea:focus{outline:none;border-color:var(--green-dark);box-shadow:0 0 0 3px rgba(118,176,67,.25)}
+  .btn{display:block;width:100%;border:0;border-radius:12px;padding:14px;min-height:52px;font-size:18px;font-weight:800;
        background:var(--green-dark);color:#fff;margin-top:16px}
   .btn:disabled{background:#D9DFD2;color:#4F5A47;cursor:not-allowed}
   .btn.busy{opacity:.8;cursor:progress}
+  .btn.ghost{background:#fff;color:var(--green-dark);border:1.5px solid var(--green-dark);font-weight:700}
   .err{background:#FCEDEA;color:#8A1F11;border:1px solid #F1C3BA;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:15px}
-  .btn.ghost{background:transparent;color:var(--green-dark);border:1.5px solid var(--green-dark)}
-  .steps{margin:14px 0 0;padding:0;list-style:none}
-  .steps li{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
-  .steps b{flex:none;width:26px;height:26px;border-radius:50%;background:var(--brown);color:#fff;
-           display:grid;place-items:center;font-size:14px}
+  .link{background:none;border:0;color:var(--green-dark);font-weight:700;font-size:15px;min-height:44px;padding:0 4px}
+  .opt:focus-visible,.btn:focus-visible,.link:focus-visible,th button:focus-visible,.nmbtn:focus-visible,.sortchip:focus-visible
+       {outline:3px solid rgba(118,176,67,.6);outline-offset:2px}
 
-  /* question */
+  /* ---------- welcome ---------- */
+  #sWelcome h1{font-size:32px;margin:4px 0 6px}
+  .privacy{font-size:14px;color:var(--muted);margin:6px 0 0}
+  .howto{background:var(--bg);border-radius:12px;padding:14px;margin-top:14px;display:grid;gap:10px}
+  .howto .ttl{font-weight:800;color:var(--brown);font-size:16px}
+  .howto .demo{display:grid;gap:6px}
+  .howto .row{display:flex;align-items:center;gap:10px;background:var(--green-tint);border:1.5px solid var(--green);border-radius:10px;padding:7px 10px;font-size:15px}
+  .howto .row b{flex:none;width:24px;height:24px;border-radius:50%;background:var(--green-dark);color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center}
+  .howto .row.empty{background:#fff;border:1.5px dashed var(--ring);color:var(--muted)}
+  .howto .row.empty b{background:none;border:1.5px solid var(--ring)}
+  .meta{display:flex;justify-content:space-between;gap:6px;font-size:14px;color:var(--muted);margin-top:14px}
+
+  /* ---------- question ---------- */
   .progress{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:6px}
-  .bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:18px}
+  .progress strong{color:var(--ink)}
+  .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
   .bar i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .3s}
-  .stem{font-size:23px;font-weight:800;color:var(--brown);margin:0 0 4px}
-  .hint{font-size:16px;color:var(--muted);margin-bottom:14px;min-height:24px}
-  .hint strong{color:var(--green-dark)}
+  .stem{font-size:26px;margin:16px 0 12px}
+  .hint{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--green-tint);border-radius:12px;
+        padding:10px 14px;margin-bottom:12px}
+  .hint .txt{font-size:18px;font-weight:700;color:var(--green-dark)}
+  .hint .txt u{text-underline-offset:4px}
+  .dots{display:flex;gap:6px;align-items:center;flex:none}
+  .dots i{width:10px;height:10px;border-radius:50%;background:var(--dot-next)}
+  .dots i.done{background:var(--green-dark)}
+  .dots i.cur{width:22px;border-radius:99px;background:var(--green)}
   .opts{display:grid;gap:10px}
   .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:right;background:#fff;border:1.5px solid var(--line);
-       border-radius:var(--radius);padding:14px;min-height:62px;font-size:18px;color:var(--ink);
+       border-radius:var(--radius);padding:14px;min-height:64px;font-size:18px;color:var(--ink);
        box-shadow:0 1px 2px rgba(89,25,0,.05);transition:border-color .15s,background .15s,transform .08s}
   .opt:active{transform:scale(.985)}
-  .opt:focus-visible,.btn:focus-visible,.link:focus-visible{outline:3px solid rgba(118,176,67,.6);outline-offset:2px}
-  .opt .letter{flex:none;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;
-       font-weight:700;color:var(--muted)}
+  .opt .circ{flex:none;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--ring);display:grid;place-items:center;font-weight:800}
   .opt .txt{flex:1}
-  .opt .rank{flex:none;font-size:15px;font-weight:700;color:var(--green-dark);visibility:hidden}
-  .opt.ranked{border-color:var(--green);background:var(--green-tint)}
-  .opt.ranked .letter{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+  /* the rank label's space is always reserved, so ranking never re-wraps text and moves the options below */
+  .opt .rank{flex:none;width:40px;text-align:left;font-size:14px;font-weight:700;color:var(--green-dark);visibility:hidden}
   .opt.ranked .rank{visibility:visible}
+  .opt.ranked{border:2px solid var(--green);background:var(--green-tint);padding:13.5px}
+  .opt.ranked .circ{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
   .opt.auto{border-style:dashed}
-  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:10px;min-height:28px}
-  .link{background:none;border:0;color:var(--blue);padding:10px 12px 10px 0;min-height:44px;font-size:16px}
-  .nav{display:flex;gap:10px;margin-top:8px}
-  .nav .btn{margin-top:8px}
-  .nav .back{flex:0 0 34%}
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px;min-height:44px;font-size:14px;color:var(--muted)}
+  /* sticky bottom nav: Next/Back always reachable */
+  .nav{position:sticky;bottom:0;z-index:10;display:flex;gap:10px;background:#fff;border-top:1px solid var(--line);
+       margin:12px -16px -28px;padding:12px 16px calc(16px + env(safe-area-inset-bottom))}
+  /* question screen fills the viewport so the nav sits at the bottom even when the content is short */
+  body.nofooter main{display:flex;flex-direction:column}
+  body.nofooter main>.wrap{flex:1;display:flex;flex-direction:column}
+  #sQuestion{display:flex;flex-direction:column;flex:1}
+  #sQuestion .nav{margin-top:auto}
+  #sQuestion .row-actions{margin-bottom:12px}
+  .nav .btn{margin-top:0;font-size:17px}
+  .nav .back{flex:0 0 32%}
+  .nav #nextBtn{flex:1}
 
-  /* done */
+  /* ---------- done ---------- */
+  #sDone{text-align:center}
+  .check{width:72px;height:72px;border-radius:50%;background:var(--green-dark);display:grid;place-items:center;margin:12px auto 12px}
+  #sDone h1{font-size:30px;margin:0 0 4px}
+  .profile{text-align:right;margin-top:16px}
+  .profile .head{display:flex;justify-content:space-between;align-items:baseline}
+  .profile .head h2{margin:0}
+  .pcode{direction:ltr;font-weight:800;letter-spacing:3px;color:var(--brown);font-size:20px}
   .scores{display:grid;gap:12px;margin-top:14px}
-  .score{display:grid;grid-template-columns:28px 1fr 44px;gap:10px;align-items:center}
-  .score b{font-size:20px;color:var(--brown);text-align:center}
-  .score .track{height:14px;background:var(--line);border-radius:99px;overflow:hidden}
+  .score{display:grid;grid-template-columns:92px minmax(0,1fr) 40px;gap:10px;align-items:center}
+  .score .lbl{font-size:15px}
+  .score .lbl b{font-size:18px;color:var(--brown);margin-left:4px}
+  .score .track{height:12px;background:var(--line);border-radius:99px;overflow:hidden}
   .score .track i{display:block;height:100%;background:#B7D59A;border-radius:99px}
-  .score.top b,.score.top span{color:var(--green-dark)}
+  .score .num{font-size:18px;font-weight:700;text-align:left;font-variant-numeric:tabular-nums}
+  .score.top .lbl,.score.top .lbl b,.score.top .num{color:var(--green-dark)}
+  .score.top .num{font-weight:800}
   .score.top .track i{background:var(--green-dark)}
-  .score span{font-size:18px}
-  .score span{font-weight:700;text-align:left;font-variant-numeric:tabular-nums}
-  .check{width:64px;height:64px;border-radius:50%;background:var(--green-tint);color:var(--green-dark);display:grid;place-items:center;
-         font-size:34px;margin:0 auto 10px}
+  .profile .foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+  .notme{display:block;margin:20px auto 0}
 
-  /* moderator */
-  .modhead{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-  .live{font-size:14px;color:var(--green-dark);font-weight:700}
-  .live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-left:6px;
-         animation:pulse 1.6s infinite}
-  @keyframes pulse{50%{opacity:.25}}
-  .tablewrap{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto}
-  table{width:100%;border-collapse:collapse;font-size:16px;min-width:420px}
-  th,td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{background:var(--green-tint);color:var(--brown);font-weight:800;position:sticky;top:0;cursor:pointer;user-select:none}
-  /* name column stays put while the numbers scroll sideways */
-  td:first-child,th:first-child{text-align:right;padding-right:14px;position:sticky;right:0;z-index:1;background:#fff;
-       box-shadow:-1px 0 0 var(--line)}
-  th:first-child{background:var(--green-tint);z-index:2}
-  td .nm{display:inline-block;max-width:110px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom;cursor:pointer}
-  td .nm.full{max-width:none;white-space:normal}
-  td .dup{display:inline-block;margin-right:4px;background:#FFF1D6;color:#8A5A00;border-radius:6px;font-size:12px;padding:0 5px}
-  .scrollhint{font-size:13px;color:var(--muted);margin:0 0 6px}
-  @media (min-width:520px){.scrollhint{display:none}}
-  td.num{font-variant-numeric:tabular-nums}
-  td.top{font-weight:800;color:var(--green-dark)}
-  td.code{font-weight:800;letter-spacing:1px;color:var(--brown);direction:ltr}
-  tr:last-child td{border-bottom:0}
+  /* ---------- moderator ---------- */
+  .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:2px}
+  .tile .v{font-size:30px;font-weight:800;line-height:1;color:var(--brown);font-variant-numeric:tabular-nums}
+  .tile .v small{font-size:18px;color:var(--muted);font-weight:700}
+  .tile.ok .v{color:var(--green-dark)}
+  .tile .k{font-size:14px;color:var(--muted)}
+  .roster{margin-bottom:14px;padding:16px}
+  .roster h2{font-size:19px;margin:0 0 10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:#FCEDEA;color:#8A1F11;border:1px solid #F1C3BA;border-radius:999px;padding:4px 12px;font-size:15px;font-weight:600}
+  .chip.maybe{background:#FFF1D6;color:#7A4F00;border-color:#F0D49A}
+  .roster .sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
+  .roster-actions{display:flex;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+  .alldone{color:var(--green-dark);font-weight:700;margin:0}
+  textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;resize:vertical}
+  .sortbar{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);margin:0 0 8px}
+  .sortchip{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:0 12px;min-height:36px;font-size:14px;font-weight:700}
+  .sortchip[aria-pressed=true]{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+  /* results table: fits 375px with no sideways scroll; code + time sit under the name */
+  table.res{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;background:#fff;
+            border:1px solid var(--line);border-radius:16px;font-size:16px}
+  table.res col.c{width:46px}
+  table.res th{position:sticky;top:56px;z-index:5;background:var(--green-tint);height:44px;padding:0 2px;border-bottom:1px solid var(--line)}
+  table.res th:first-child{border-top-right-radius:16px;text-align:right;padding-right:12px}
+  table.res th:last-child{border-top-left-radius:16px;padding-left:8px}
+  th button{background:none;border:0;color:var(--brown);font-weight:800;font-size:16px;min-height:36px;min-width:36px;padding:2px 6px;border-radius:8px}
+  th[aria-sort] button{background:var(--green-dark);color:#fff}
+  table.res td{padding:8px 2px;text-align:center;border-top:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+  table.res tbody tr:first-child td{border-top:0}
+  table.res td:first-child{text-align:right;padding-right:12px}
+  table.res td:last-child{padding-left:8px}
+  table.res td.top{font-weight:800;color:var(--green-dark)}
+  .who{display:flex;align-items:center;gap:6px;min-width:0}
+  .nmbtn{background:none;border:0;padding:0;margin:0;min-height:32px;color:var(--ink);font-size:16px;text-align:right;
+         overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .nmbtn.full{white-space:normal}
+  .tag{flex:none;border-radius:6px;font-size:12px;padding:0 5px;font-weight:600}
+  .tag.dup{background:#FFF1D6;color:#7A4F00}
+  .tag.off{background:#EEF0F5;color:#3B4A6B}
+  .sub2{font-size:13px;color:var(--muted)}
+  .sub2 code{font-family:inherit;font-weight:800;letter-spacing:1px;color:var(--brown)}
+  .empty{text-align:center;padding:28px 16px;color:var(--muted)}
   .tools{display:flex;gap:10px;margin-top:12px}
-  .tools .btn{margin-top:0;font-size:16px;padding:11px}
+  .tools .btn{margin-top:0;font-size:16px;min-height:48px;padding:11px}
   .note{font-size:13px;color:var(--muted);margin-top:10px}
+  .print-title{display:none}
 
-  /* footer from template */
+  /* ---------- footer from template ---------- */
   footer{background:#fff;border-top:4px solid var(--green);padding:18px 0 22px;text-align:center;color:var(--brown)}
   footer .quote{font-weight:700;font-size:15px;max-width:440px;margin:0 auto 2px}
   footer .by{font-size:14px;margin-bottom:12px}
@@ -131,25 +197,34 @@
   footer .biz div{text-align:right}
   footer .biz strong{color:var(--brown);font-size:14px;display:block}
   footer a{color:inherit}
-  /* short phones (iPhone SE): slimmer header so Next stays above the fold */
-  @media (max-height:700px){header{height:96px} .opt{min-height:56px;padding:11px 14px} main{padding-top:14px}}
-  .empty{text-align:center;padding:28px 16px;color:var(--muted)}
 
-  /* roster: who hasn't filled it in */
-  .roster{margin-bottom:14px}
-  .roster-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .roster-count{font-weight:800;color:var(--green-dark);font-size:18px;font-variant-numeric:tabular-nums}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:#FCEDEA;color:#8A1F11;border:1px solid #F1C3BA;border-radius:999px;padding:4px 12px;font-size:15px;font-weight:600}
-  .chip.maybe{background:#FFF1D6;color:#8A5A00;border-color:#F0D49A}
-  .roster .sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
-  .roster-actions{display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:6px}
-  .alldone{color:var(--green-dark);font-weight:700}
-  textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;resize:vertical}
-  textarea:focus{outline:none;border-color:var(--green-dark);box-shadow:0 0 0 3px rgba(118,176,67,.25)}
-  td .off{display:inline-block;margin-right:4px;background:#EEF0F5;color:#3B4A6B;border-radius:6px;font-size:12px;padding:0 5px}
+  /* short phones (iPhone SE 375x667) */
+  @media (max-height:700px){
+    .hero{height:110px}
+    .opt{min-height:56px;padding:10px 14px} .opt.ranked{padding:9.5px 13.5px}
+    .stem{font-size:23px;margin:12px 0 10px}
+    .hint{padding:8px 12px;margin-bottom:10px}
+    .opts{gap:8px}
+    body.compact main{padding-top:12px}
+  }
 
   .hidden{display:none!important}
+
+  /* ---------- print: title + table only ---------- */
+  @media print{
+    .mock,.hero,.bar-head,footer,.roster,.tools,.note,.tiles,.sortbar,.workshop{display:none!important}
+    body{background:#fff;color:#000;font-size:12pt}
+    main{padding:0}
+    .wrap{max-width:none;padding:0}
+    .print-title{display:block;font-size:16pt;font-weight:800;margin:0 0 10pt;color:#000}
+    table.res{border:1px solid #000;border-radius:0;font-size:12pt}
+    table.res th{position:static;background:#fff;border-bottom:1px solid #000}
+    th button,th[aria-sort] button{color:#000;background:none}
+    table.res td,table.res td.top,.sub2,.sub2 code,.nmbtn{color:#000}
+    table.res td{border-top:1px solid #999}
+    .nmbtn{white-space:normal}
+    tr{break-inside:avoid}
+  }
 </style>
 </head>
 <body>
@@ -160,25 +235,34 @@
   <button onclick="try{localStorage.removeItem(STORE)}catch(e){};location.reload()">איפוס</button>
 </div>
 
-<header role="img" aria-label="Adizes Outdoor Israel"></header>
+<div class="hero" role="img" aria-label="Adizes Outdoor Israel"></div>
+<header class="bar-head" role="banner">
+  <span class="t" id="barTitle">סגנונות החלטה</span>
+  <span class="brand" id="barBrand">ADIZES · PAEI</span>
+  <span class="live hidden" id="barLive"></span>
+</header>
 
 <main><div class="wrap">
 
   <!-- 1. Welcome -->
   <section id="sWelcome">
     <span class="workshop" id="wsName"></span>
-    <p class="eyebrow">ADIZES · PAEI</p>
-    <h1>סגנונות החלטה</h1>
-    <p class="muted">שאלון קצר על דרך הפעולה שלך בעבודה. אין תשובות נכונות או לא נכונות – ענה/י לפי מה שבאמת מתאים לך, לא לפי מה שנראה שצריך.</p>
+    <h1 tabindex="-1">סגנונות החלטה</h1>
+    <p class="intro">שאלון קצר על איך אתם פועלים בעבודה. אין תשובות נכונות – עִנו לפי מה שבאמת מתאים לכם.</p>
     <div class="card">
-      <label for="name">השם שלך</label>
+      <label for="name">השם שלכם</label>
       <input id="name" type="text" autocomplete="name" maxlength="40" placeholder="שם פרטי ומשפחה" oninput="checkName()" onkeydown="if(event.key==='Enter'&&!$('startBtn').disabled)start()">
       <p class="privacy">השם והתוצאות מוצגים רק למנחה הסדנה.</p>
-      <ul class="steps">
-        <li><b>1</b><span>יוצגו 20 משפטים, ולכל אחד 4 השלמות.</span></li>
-        <li><b>2</b><span>הקש/י על ההשלמות <strong>לפי הסדר</strong> – קודם זו שהכי מתאימה לך, אחר כך השנייה, והשלישית. הרביעית תסומן לבד.</span></li>
-        <li><b>3</b><span>לוקח בערך 5 דקות.</span></li>
-      </ul>
+      <div class="howto">
+        <span class="ttl">איך עונים?</span>
+        <span style="font-size:15px;line-height:1.4">לכל משפט 4 השלמות. הקישו עליהן <strong>לפי הסדר</strong> – מהכי מתאים להכי פחות:</span>
+        <div class="demo" aria-hidden="true">
+          <div class="row"><b>1</b><span>הכי מתאים לי</span></div>
+          <div class="row"><b>2</b><span>שני</span></div>
+          <div class="row empty"><b></b><span>שלישי… והרביעי מסומן לבד</span></div>
+        </div>
+      </div>
+      <div class="meta"><span>20 משפטים</span><span>כ־5 דקות</span><span>התשובות נשמרות בטלפון</span></div>
       <button class="btn" id="startBtn" disabled onclick="start()">מתחילים</button>
     </div>
   </section>
@@ -187,12 +271,15 @@
   <section id="sQuestion" class="hidden">
     <div class="progress"><span id="qCount"></span><span id="qName"></span></div>
     <div class="bar"><i id="qBar"></i></div>
-    <p class="stem" id="qStem"></p>
-    <div class="hint" id="qHint" aria-live="polite"></div>
+    <h1 class="stem" id="qStem" tabindex="-1"></h1>
+    <div class="hint">
+      <span class="txt" id="qHint" aria-live="polite"></span>
+      <span class="dots" id="qDots" role="img"></span>
+    </div>
     <div class="opts" id="qOpts"></div>
     <div class="row-actions">
+      <span id="undoHint">הקשה על השלמה מסומנת מבטלת אותה</span>
       <button class="link" id="resetRow" onclick="resetRow()">איפוס השורה</button>
-      <span class="muted" id="undoHint" style="font-size:14px">הקשה על השלמה מסומנת מבטלת אותה</span>
     </div>
     <div class="nav">
       <button class="btn ghost back" id="backBtn" onclick="go(-1)">הקודם</button>
@@ -202,31 +289,31 @@
 
   <!-- 2b. Confirm before sending -->
   <section id="sConfirm" class="hidden">
-    <div class="progress"><span>כל 20 השאלות נענו</span><span id="cName"></span></div>
+    <div class="progress"><span><strong>כל 20 השאלות</strong> נענו</span><span id="cName"></span></div>
     <div class="bar"><i style="width:100%"></i></div>
-    <h1>מוכנים לשלוח?</h1>
-    <p class="muted">אחרי השליחה לא ניתן לשנות את התשובות. אפשר לחזור ולעבור עליהן לפני כן.</p>
+    <h1 tabindex="-1" style="margin-top:18px">מוכנים לשלוח?</h1>
+    <p class="intro">אחרי השליחה לא ניתן לשנות את התשובות. אפשר לחזור ולעבור עליהן לפני כן.</p>
     <button class="btn" id="sendBtn" onclick="submit()">שליחה</button>
     <div class="err hidden" id="sendErr" role="alert">לא הצלחנו לשלוח – כנראה אין חיבור לאינטרנט. התשובות שמורות בטלפון, נסו שוב בעוד רגע.</div>
     <button class="btn ghost" onclick="qi=Q.length-1;show('sQuestion');renderQ()">חזרה לתשובות</button>
   </section>
 
   <!-- 3. Done -->
-  <section id="sDone" class="hidden" style="text-align:center">
-    <div class="check">✓</div>
-    <h1 id="doneTitle">תודה!</h1>
-    <p class="muted">התשובות שלך נשלחו למנחה הסדנה.</p>
-    <div class="card" style="text-align:right">
-      <h2>הציונים שלך</h2>
+  <section id="sDone" class="hidden">
+    <div class="check"><svg aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h1 id="doneTitle" tabindex="-1">תודה!</h1>
+    <p class="intro" style="margin:0">התשובות נשלחו למנחה הסדנה.</p>
+    <div class="card profile" id="doneCard">
+      <div class="head"><h2>הפרופיל שלך</h2><span class="pcode" id="doneCode"></span></div>
       <div class="scores" id="doneScores"></div>
-      <p class="note">המנחה יסביר בסדנה את משמעות הציונים.</p>
+      <p class="foot">אין פרופיל טוב או רע. המנחה יסביר בסדנה מה המשמעות של כל אות.</p>
     </div>
-    <button class="link notme" onclick="newParticipant()">לא את/ה? משתתף/ת חדש/ה בטלפון הזה</button>
+    <button class="link notme" id="notMe" onclick="newParticipant()"></button>
   </section>
 
   <!-- 4. Moderator login -->
   <section id="sModLogin" class="hidden">
-    <h1>כניסת מנחה</h1>
+    <h1 tabindex="-1">כניסת מנחה</h1>
     <div class="card">
       <label for="pw">סיסמה</label>
       <input id="pw" type="password" placeholder="במוקאפ: adizes" onkeydown="if(event.key==='Enter')modEnter()" oninput="$('pwErr').classList.add('hidden')">
@@ -237,48 +324,43 @@
 
   <!-- 5. Moderator results -->
   <section id="sMod" class="hidden">
-    <div class="modhead">
-      <div>
-        <span class="workshop" id="wsName2"></span>
-        <h1 style="margin:0">תוצאות</h1>
-        <span class="muted" id="modCount"></span>
-      </div>
-      <span class="live" id="liveTxt">מתעדכן אוטומטית</span>
+    <h1 class="hidden" tabindex="-1" id="modH1">תוצאות</h1>
+    <p class="print-title" id="printTitle"></p>
+    <span class="workshop" id="wsName2"></span>
+    <div class="tiles">
+      <div class="tile"><span class="v" id="tSubs">0</span><span class="k">הגשות התקבלו</span></div>
+      <div class="tile ok" id="tRosterTile"><span class="v" id="tRoster"></span><span class="k">מהרשימה מילאו</span></div>
     </div>
+
     <!-- Who hasn't filled it in yet -->
     <div class="card roster">
-      <div class="roster-head">
-        <h2 style="margin:0">מי עוד לא מילא?</h2>
-        <span class="roster-count" id="rosterCount"></span>
-      </div>
-      <div class="bar" style="margin:10px 0 12px"><i id="rosterBar"></i></div>
+      <h2 id="rosterTitle">עוד לא מילאו</h2>
       <div id="rosterBody"></div>
       <div id="rosterEdit" class="hidden">
-        <label for="rosterTxt" style="margin-top:4px">משתתפים צפויים – שם אחד בכל שורה</label>
+        <label for="rosterTxt">משתתפים צפויים – שם אחד בכל שורה</label>
         <textarea id="rosterTxt" rows="7" placeholder="דנה כהן&#10;יוסי לוי&#10;..."></textarea>
         <button class="btn" onclick="saveRoster()">שמירת הרשימה</button>
       </div>
       <div class="roster-actions" id="rosterActions">
         <button class="link" onclick="editRoster()">עריכת הרשימה</button>
-        <button class="link" id="copyBtn" onclick="copyMissing()">העתקת השמות לתזכורת</button>
+        <button class="link" id="copyBtn" onclick="copyMissing()">העתקת תזכורת</button>
       </div>
     </div>
 
-    <p class="scrollhint">← גללו את הטבלה הצידה לקוד ולשעה</p>
-    <div class="tablewrap">
-      <table>
-        <thead><tr>
-          <th data-k="name">שם</th><th data-k="P">P</th><th data-k="A">A</th><th data-k="E">E</th><th data-k="I">I</th>
-          <th data-k="code">קוד</th><th data-k="t">שעה</th>
-        </tr></thead>
-        <tbody id="modRows"></tbody>
-      </table>
+    <div class="sortbar">מיון:
+      <button class="sortchip" data-k="t" onclick="setSort('t')">שעה</button>
+      <button class="sortchip" data-k="name" onclick="setSort('name')">שם</button>
     </div>
+    <table class="res">
+      <colgroup><col><col class="c"><col class="c"><col class="c"><col class="c" style="width:54px"></colgroup>
+      <thead><tr id="resHead"></tr></thead>
+      <tbody id="modRows"></tbody>
+    </table>
     <div class="tools">
       <button class="btn ghost" onclick="exportCsv()">הורדה לאקסל</button>
       <button class="btn ghost" onclick="window.print()">הדפסה</button>
     </div>
-    <p class="note">קוד: אות גדולה = ציון 85 ומעלה, אות קטנה = 60–84, מקף = מתחת ל־60. (ספים לדוגמה – לאשר עם שלמה.) הקשה על כותרת ממיינת, הקשה על שם מציגה אותו במלואו. <span class="dup">כפול</span> = אותו שם הופיע יותר מפעם אחת.</p>
+    <p class="note">קוד: אות גדולה = 85 ומעלה · אות קטנה = 60–84 · מקף = מתחת ל־60 (ספים לדוגמה – לאשר עם שלמה). הקישו על כותרת למיון, ועל שם כדי לראות אותו במלואו. <span class="tag dup">כפול</span> = אותו שם הופיע יותר מפעם אחת.</p>
   </section>
 
 </div></main>
@@ -295,6 +377,13 @@
 </footer>
 
 <script>
+/* ---------- config ---------- */
+const WORKSHOP = "סדנת מנהלים · 16/11/26";
+const SHOW_SCORES_TO_PARTICIPANT = true;   // false: thank-you screen only, no score card
+const SHOW_CODE_TO_PARTICIPANT = false;    // agreed 16/11/26: participants see their 4 scores but not the code. Flip to show it.
+// ⚠ Hebrew type names: confirm with the workshop facilitator before shipping
+const TYPE_NAMES = {P:"מבצע", A:"מנהל", E:"יזם", I:"מאחד"};
+
 /* Questionnaire: [stem, P, A, E, I] — transcribed from שאלון אדיג'ס.PDF */
 const Q = [
  ["מטרתי העיקרית היא","להיות במשרה עם עמדה","להיות הטוב ביותר בשטח שלי","להשיג הכרה לעבודתי","להרגיש בטוח/ה במקום עבודתי"],
@@ -318,14 +407,15 @@ const Q = [
  ["ההחלטות שלי בד\"כ","מציאותיות וישירות","שיטתיות ופשוטות","כוללניות וגמישות","רגישות לצרכי אחרים"],
  ["אינני אוהב/ת","איבוד שליטה","עבודה משעממת","לציית ולעקוב אחרי חוקים","להיות דחוי/ה"],
 ];
-const TYPES = ["P","A","E","I"], POINTS = [8,4,2,1], LETTERS = ["א","ב","ג","ד"];
+const TYPES = ["P","A","E","I"], POINTS = [8,4,2,1];
 const RANK_TXT = ["ראשון","שני","שלישי","רביעי"], RANK_ORD = ["הראשון","השני","השלישי","הרביעי"];
 /* Fixed shuffled display order per row, so P is not always first */
 const PERM = Q.map((_,i)=>{const a=[0,1,2,3];let s=i*9301+49297;for(let j=3;j>0;j--){s=(s*9301+49297)%233280;const k=Math.floor(s/233280*(j+1));[a[j],a[k]]=[a[k],a[j]];}return a;});
 
-const WORKSHOP = "סדנת מנהלים · 16/11/26";
 let name = "", qi = 0, answers = Q.map(()=>[]), submitted = null, advTimer = null;
 const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const hhmm = () => new Date().toTimeString().slice(0,5);
 
 /* Progress is kept on the phone so a reload / app switch doesn't lose answers */
 const STORE = "adizes:" + WORKSHOP;
@@ -333,34 +423,45 @@ function save(){ try{ localStorage.setItem(STORE, JSON.stringify({name, qi, answ
 function load(){ try{ const d = JSON.parse(localStorage.getItem(STORE)||"null");
   if (d && d.answers && d.answers.length===Q.length){ ({name, qi, answers, submitted} = d); return true; } }catch(e){} return false; }
 
-function show(id){["sWelcome","sQuestion","sConfirm","sDone","sModLogin","sMod"].forEach(s=>$(s).classList.toggle("hidden",s!==id));
-  document.body.classList.toggle("compact", id!=="sWelcome" && id!=="sModLogin"); window.scrollTo(0,0);}
+const SCREENS = ["sWelcome","sQuestion","sConfirm","sDone","sModLogin","sMod"];
+function show(id){
+  SCREENS.forEach(s=>$(s).classList.toggle("hidden",s!==id));
+  document.body.classList.toggle("compact", id!=="sWelcome" && id!=="sModLogin");      // image header only on welcome + login
+  document.body.classList.toggle("nofooter", id==="sQuestion" || id==="sConfirm");
+  const mod = id==="sMod";
+  $("barTitle").textContent = mod ? "תוצאות · מנחה" : "סגנונות החלטה";
+  $("barBrand").classList.toggle("hidden", mod); $("barLive").classList.toggle("hidden", !mod);
+  window.scrollTo(0,0);
+  const h = $(id).querySelector("h1"); if (h) h.focus({preventScroll:true});           // screen readers land on the new screen
+}
 function checkName(){ $("startBtn").disabled = $("name").value.trim().length < 2; }
 function start(){ name = $("name").value.trim(); qi = 0; save(); show("sQuestion"); renderQ(); }
 
 function renderQ(){
-  const row = Q[qi], ans = answers[qi];
-  $("qCount").textContent = `שאלה ${qi+1} מתוך ${Q.length}`;
+  const row = Q[qi], ans = answers[qi], n = ans.length;
+  $("qCount").innerHTML = `<strong>שאלה ${qi+1}</strong> מתוך ${Q.length}`;
   $("qName").textContent = name;
-  $("qBar").style.width = ((qi + (ans.length===4?1:0)) / Q.length * 100) + "%";
+  $("qBar").style.width = ((qi + (n===4?1:0)) / Q.length * 100) + "%";
   $("qStem").textContent = row[0] + "…";
-  $("qHint").innerHTML = ans.length===4 ? "<strong>✓ השורה הושלמה</strong>" :
-     ans.length===0 ? "מה <strong>הכי</strong> מתאים לך?" : `ומה במקום <strong>${RANK_ORD[ans.length]}</strong>?`;
+  $("qHint").innerHTML = n===4 ? "✓ השורה הושלמה" : n===0 ? "מה הכי מתאים לך?" : `מה במקום <u>${RANK_ORD[n]}</u>?`;
+  const step = Math.min(n,3);   // 3 manual taps; the 4th is automatic
+  $("qDots").innerHTML = [0,1,2].map(i=>`<i class="${i<step?"done":i===step?"cur":""}"></i>`).join("");
+  $("qDots").setAttribute("aria-label", n===4 ? "השורה הושלמה" : `שלב ${step+1} מתוך 3`);
   $("qOpts").innerHTML = "";
-  PERM[qi].forEach((t,pos)=>{
+  PERM[qi].forEach(t=>{
     const r = ans.indexOf(t);
     const b = document.createElement("button");
     b.className = "opt" + (r>=0?" ranked":"") + (r===3?" auto":"");
     b.setAttribute("aria-pressed", r>=0);
-    b.innerHTML = `<span class="letter">${r>=0 ? r+1 : LETTERS[pos]}</span><span class="txt">${row[t+1]}</span><span class="rank">${r>=0?RANK_TXT[r]:""}</span>`;
+    b.innerHTML = `<span class="circ" aria-hidden="true">${r>=0 ? r+1 : ""}</span><span class="txt">${esc(row[t+1])}</span><span class="rank">${r>=0?RANK_TXT[r]:""}</span>`;
     b.onclick = () => pick(t);
     $("qOpts").appendChild(b);
   });
-  $("resetRow").style.visibility = ans.length ? "visible" : "hidden";
-  $("undoHint").style.visibility = ans.length ? "visible" : "hidden";
+  $("resetRow").style.visibility = n ? "visible" : "hidden";
+  $("undoHint").style.visibility = n ? "visible" : "hidden";
   $("backBtn").classList.toggle("hidden", qi === 0);   // Next goes full width on question 1
-  $("nextBtn").disabled = ans.length !== 4;
-  $("nextBtn").textContent = ans.length !== 4 ? "סמנו את כל 4 ההשלמות" : qi === Q.length-1 ? "סיום" : "הבא";
+  $("nextBtn").disabled = n !== 4;
+  $("nextBtn").textContent = n !== 4 ? `עוד ${3-n} לדירוג` : qi === Q.length-1 ? "סיום" : "הבא";
 }
 function pick(t){
   clearTimeout(advTimer);
@@ -390,15 +491,19 @@ function submit(){
     sending = false; btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "שליחה";
     if (!navigator.onLine){ $("sendErr").classList.remove("hidden"); return; }
     const s = score(answers);
-    submitted = {name, ...s, code:code(s), t:new Date().toTimeString().slice(0,5)};
+    submitted = {name, ...s, code:code(s), t:hhmm()};
     save(); renderDone();
   }, 900);
 }
 function renderDone(){
-  const s = submitted;
-  $("doneTitle").textContent = `תודה, ${name.split(" ")[0]}!`;
+  const s = submitted, first = name.split(" ")[0];
+  $("doneTitle").textContent = `תודה, ${first}!`;
+  $("notMe").textContent = `לא ${first}? משתתף/ת חדש/ה בטלפון הזה`;
+  $("doneCard").classList.toggle("hidden", !SHOW_SCORES_TO_PARTICIPANT);
+  $("doneCode").textContent = SHOW_CODE_TO_PARTICIPANT ? s.code : "";
   const best = Math.max(...TYPES.map(t=>s[t]));
-  $("doneScores").innerHTML = TYPES.map(t=>`<div class="score${s[t]===best?" top":""}"><b>${t}</b><div class="track"><i style="width:${s[t]/160*100}%"></i></div><span>${s[t]}</span></div>`).join("");
+  $("doneScores").innerHTML = TYPES.map(t=>`<div class="score${s[t]===best?" top":""}">`+
+    `<span class="lbl"><b>${t}</b>${TYPE_NAMES[t]}</span><div class="track"><i style="width:${s[t]/160*100}%"></i></div><span class="num">${s[t]}</span></div>`).join("");
   show("sDone");
 }
 
@@ -412,6 +517,7 @@ const MOCK = MOCK_NAMES.map((n,i)=>{
 });
 let sortK = "t", sortDir = 1;
 function rows(){ return submitted ? [...MOCK, submitted] : MOCK; }
+
 /* ---------- roster: expected participants vs. who submitted ---------- */
 const ROSTER_KEY = "adizes-roster:" + WORKSHOP;
 // Mockup default: most of the mock submitters, plus 3 who haven't filled it in and one spelling variant
@@ -419,40 +525,43 @@ let roster = ["דנה כהן","יוסי לוי","מיכל אברהם","אבי מ
               "טל פרידמן","גיל שפירא","הילה כץ","רונית גבאי","משה אלון","יעל ברק","אלכס רוזנברג"];
 try{ const r = JSON.parse(localStorage.getItem(ROSTER_KEY)||"null"); if (Array.isArray(r)) roster = r; }catch(e){}
 const norm = s => s.replace(/[׳'"`.,\-־]/g," ").replace(/\s+/g," ").trim();
-// exact match (ignoring spaces/punctuation) = hit; same first OR last name only = "maybe" (e.g. דני / דניאל, nickname)
-function rosterMatch(subName){
-  const n = norm(subName), parts = n.split(" ");
-  if (roster.some(r=>norm(r)===n)) return {hit:true};
-  const maybe = roster.find(r=>{ const rp = norm(r).split(" "); return rp.length>1 && parts.length>1 && (rp[rp.length-1]===parts[parts.length-1]); });
-  return {hit:false, maybe};
+const isExact = (a,b) => norm(a)===norm(b);
+/* "Maybe the same person": the first names match or one starts with the other (דני/דניאל, אלכס/אלכסנדרה)
+   AND the surnames share at least one word (גבאי / גבאי־לוי). דנה לוי vs יוסי לוי is NOT a maybe. */
+function isNear(a,b){
+  const pa = norm(a).split(" "), pb = norm(b).split(" ");
+  if (pa.length<2 || pb.length<2) return false;
+  const fa = pa[0], fb = pb[0];
+  if (!(fa.startsWith(fb) || fb.startsWith(fa))) return false;
+  const sa = pa.slice(1), sb = pb.slice(1);
+  return sa.some(w=>sb.includes(w));
 }
+function onRoster(subName){ return roster.some(r=>isExact(r,subName)); }
 function rosterStatus(){
-  const subs = rows().map(p=>norm(p.name));
+  const subs = rows();
   const missing = [], maybe = [];
   roster.forEach(r=>{
-    const rn = norm(r);
-    if (subs.includes(rn)) return;
-    const rl = rn.split(" ").pop();
-    const near = rows().find(p=>{ const pn = norm(p.name).split(" "); return pn.length>1 && pn[pn.length-1]===rl && !roster.some(x=>norm(x)===norm(p.name)); });
-    (near ? maybe : missing).push(near ? {r, near:near.name} : r);
+    if (subs.some(p=>isExact(p.name,r))) return;
+    const near = subs.find(p=>!onRoster(p.name) && isNear(p.name,r));   // same rule as the table badge
+    if (near) maybe.push({r, near:near.name}); else missing.push(r);
   });
   return {missing, maybe, done: roster.length - missing.length - maybe.length};
 }
 function renderRoster(){
-  const esc = s => s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   $("rosterEdit").classList.add("hidden"); $("rosterActions").classList.remove("hidden");
+  $("tRosterTile").classList.toggle("hidden", !roster.length);
   if (!roster.length){
-    $("rosterCount").textContent = ""; $("rosterBar").style.width = "0";
+    $("rosterTitle").textContent = "רשימת משתתפים";
     $("rosterBody").innerHTML = `<p class="muted" style="margin:0">הדביקו את רשימת המשתתפים הצפויים, ותראו כאן מי עוד לא מילא.</p>`;
     $("copyBtn").classList.add("hidden"); return;
   }
   const st = rosterStatus();
-  $("rosterCount").textContent = `${st.done} מתוך ${roster.length}`;
-  $("rosterBar").style.width = (st.done/roster.length*100) + "%";
+  $("tRoster").innerHTML = `${st.done}<small> / ${roster.length}</small>`;
+  $("rosterTitle").textContent = `עוד לא מילאו (${st.missing.length})`;
   let html = "";
-  if (!st.missing.length && !st.maybe.length) html = `<p class="alldone" style="margin:0">✓ כולם מילאו</p>`;
+  if (!st.missing.length && !st.maybe.length) html = `<p class="alldone">✓ כולם מילאו</p>`;
   if (st.missing.length) html += `<div class="chips">${st.missing.map(n=>`<span class="chip">${esc(n)}</span>`).join("")}</div>`;
-  if (st.maybe.length) html += `<p class="sub">אולי מילאו בשם אחר – כדאי לבדוק:</p><div class="chips">${st.maybe.map(m=>`<span class="chip maybe">${esc(m.r)} ← ${esc(m.near)}?</span>`).join("")}</div>`;
+  if (st.maybe.length) html += `<p class="sub">אולי מילאו בשם אחר:</p><div class="chips">${st.maybe.map(m=>`<span class="chip maybe">${esc(m.r)} ← ${esc(m.near)}?</span>`).join("")}</div>`;
   $("rosterBody").innerHTML = html;
   $("copyBtn").classList.toggle("hidden", !st.missing.length);
 }
@@ -468,36 +577,53 @@ function saveRoster(){
 function copyMissing(){
   const names = rosterStatus().missing;
   const msg = `תזכורת: עדיין לא מילאו את שאלון סגנונות ההחלטה לקראת ${WORKSHOP}:\n` + names.join("\n");
-  const done = () => { $("copyBtn").textContent = "✓ הועתק"; setTimeout(()=>$("copyBtn").textContent="העתקת השמות לתזכורת", 1800); };
+  const done = () => { $("copyBtn").textContent = "✓ הועתק"; setTimeout(()=>$("copyBtn").textContent="העתקת תזכורת", 1800); };
   (navigator.clipboard ? navigator.clipboard.writeText(msg) : Promise.reject()).then(done, ()=>{ prompt("העתיקו:", msg); });
 }
 
+/* ---------- results table ---------- */
+const COLS = [{k:"name",l:"שם"},{k:"P",l:"P"},{k:"A",l:"A"},{k:"E",l:"E"},{k:"I",l:"I"}];
+function setSort(k){
+  if (sortK===k) sortDir = -sortDir;
+  else { sortK = k; sortDir = TYPES.includes(k) ? -1 : 1; }     // scores: highest first
+  renderMod();
+}
+function renderHead(){
+  $("resHead").innerHTML = COLS.map(c=>{
+    const on = sortK===c.k, arrow = on ? (sortDir>0 ? " ↑" : " ↓") : "";
+    return `<th scope="col"${on?` aria-sort="${sortDir>0?"ascending":"descending"}"`:""}><button onclick="setSort('${c.k}')">${c.l}${arrow}</button></th>`;
+  }).join("");
+  document.querySelectorAll(".sortchip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.k===sortK));
+}
 function renderMod(){
   $("wsName2").textContent = WORKSHOP;
-  renderRoster();
+  $("printTitle").textContent = `${WORKSHOP} – תוצאות`;
+  $("barLive").textContent = `חי · ${hhmm()}`;
+  renderRoster(); renderHead();
   const list = rows().slice().sort((a,b)=> (a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0) * sortDir);
-  $("modCount").textContent = `${list.length} משתתפים הגישו`;
-  $("liveTxt").textContent = `מתעדכן אוטומטית · ${new Date().toTimeString().slice(0,5)}`;
-  if (!list.length){ $("modRows").innerHTML = `<tr><td colspan="7" class="empty">עדיין אין הגשות – שתפו את הקישור עם המשתתפים.</td></tr>`; return; }
-  const seen = {}; list.forEach(p=>{ const k=p.name.trim(); seen[k]=(seen[k]||0)+1; });
-  const esc = s => s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  $("tSubs").textContent = list.length;
+  if (!list.length){ $("modRows").innerHTML = `<tr><td colspan="5" class="empty">עדיין אין הגשות – שתפו את הקישור עם המשתתפים.</td></tr>`; return; }
+  const seen = {}; list.forEach(p=>{ const k=norm(p.name); seen[k]=(seen[k]||0)+1; });
   $("modRows").innerHTML = list.map(p=>{
-    const max = Math.max(p.P,p.A,p.E,p.I), dup = seen[p.name.trim()]>1;
-    const off = roster.length && !rosterMatch(p.name).hit;
-    return `<tr><td><span class="nm" title="${esc(p.name)}" onclick="this.classList.toggle('full')">${esc(p.name)}</span>${dup?'<span class="dup">כפול</span>':''}${off?'<span class="off">לא ברשימה</span>':''}</td>`+
-      `${TYPES.map(t=>`<td class="num${p[t]===max?" top":""}">${p[t]}</td>`).join("")}<td class="code">${p.code}</td><td class="num muted">${p.t}</td></tr>`;
+    const max = Math.max(p.P,p.A,p.E,p.I), dup = seen[norm(p.name)]>1, off = roster.length && !onRoster(p.name);
+    return `<tr><td><div class="who"><button class="nmbtn" title="${esc(p.name)}" aria-expanded="false" onclick="toggleName(this)">${esc(p.name)}</button>`+
+      `${dup?'<span class="tag dup">כפול</span>':''}${off?'<span class="tag off">לא ברשימה</span>':''}</div>`+
+      `<div class="sub2"><code dir="ltr">${p.code}</code> · ${p.t}</div></td>`+
+      TYPES.map(t=>`<td${p[t]===max?' class="top"':''}>${p[t]}</td>`).join("")+`</tr>`;
   }).join("");
 }
-document.querySelectorAll("th").forEach(th=>th.onclick=()=>{ const k=th.dataset.k; sortDir = sortK===k ? -sortDir : (["P","A","E","I"].includes(k)?-1:1); sortK=k; renderMod(); });
+function toggleName(b){ const on = b.classList.toggle("full"); b.setAttribute("aria-expanded", on); }
 function modEnter(){
   if ($("pw").value !== "adizes"){ $("pwErr").classList.remove("hidden"); $("pw").select(); return; }   // mockup password
   show("sMod"); renderMod();
 }
 function exportCsv(){
+  const q = v => `"${String(v).replace(/"/g,'""')}"`;     // quote every field, so commas/quotes in names don't break columns
   const head = ["שם","P","A","E","I","קוד","שעה"];
-  const body = rows().map(p=>[p.name,p.P,p.A,p.E,p.I,p.code,p.t].join(","));
-  const blob = new Blob(["﻿"+[head.join(","),...body].join("\n")],{type:"text/csv"});
-  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "adizes-results.csv"; a.click();
+  const body = rows().map(p=>[p.name,p.P,p.A,p.E,p.I,p.code,p.t].map(q).join(","));
+  const blob = new Blob(["﻿"+[head.map(q).join(","),...body].join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = `adizes-results-${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
 function mockView(v){
   $("mockP").classList.toggle("on", v==="p"); $("mockM").classList.toggle("on", v==="m");
