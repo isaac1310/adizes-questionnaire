@@ -13,6 +13,7 @@
  * Every response is JSON, even on errors, so the phone can tell "rejected" from "offline".
  */
 
+var SERVICE_VERSION = "2026-11-20.1";   // bump on each push; GET ?action=ping shows it
 var TAB_WORKSHOPS = "Workshops";
 var TAB_SUBMISSIONS = "Submissions";
 var WORKSHOP_HEAD = ["קוד", "שם הסדנה", "תאריך", "פתוח", "ציונים למשתתפים", "משתתפים צפויים (שם בכל שורה)"];
@@ -23,6 +24,7 @@ var SUBMISSION_HEAD = ["זמן", "קוד סדנה", "שם", "P", "A", "E", "I", 
 function doGet(e) {
   return respond(function () {
     var p = (e && e.parameter) || {};
+    if (p.action === "ping") return { ok: true, version: SERVICE_VERSION };
     if (p.action !== "workshop") return { ok: false, error: "bad_request" };
     if (!isValidWorkshopCode(p.code)) return { ok: false, error: "bad_workshop" };
     var w = findWorkshop(p.code);
