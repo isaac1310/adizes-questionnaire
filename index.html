@@ -189,6 +189,12 @@
   .tools{display:flex;gap:10px;margin-top:12px}
   .tools .btn{margin-top:0;font-size:16px;min-height:48px;padding:11px}
   .note{font-size:13px;color:var(--muted);margin-top:10px}
+  /* code key, same bands as Shlomo's results sheet */
+  table.bands{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px;background:#fff;border:1px solid var(--line)}
+  table.bands th,table.bands td{padding:6px 4px;text-align:center;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  table.bands thead th{background:var(--green-tint);color:var(--brown);font-weight:800;border-top:0}
+  table.bands td:first-child{text-align:right;padding-right:10px;white-space:nowrap}
+  table.bands td:first-child b{color:var(--brown)}
   .print-title{display:none}
 
   /* ---------- footer from template ---------- */
@@ -215,7 +221,7 @@
 
   /* ---------- print: title + table only ---------- */
   @media print{
-    .mock,.hero,.bar-head,footer,.roster,.tools,.note,.tiles,.sortbar,.workshop{display:none!important}
+    .mock,.hero,.bar-head,footer,.roster,.tools,.note,.tiles,.sortbar,.workshop,table.bands{display:none!important}
     body{background:#fff;color:#000;font-size:12pt}
     main{padding:0}
     .wrap{max-width:none;padding:0}
@@ -369,7 +375,11 @@
       <button class="btn ghost" onclick="exportCsv()">הורדה לאקסל</button>
       <button class="btn ghost" onclick="window.print()">הדפסה</button>
     </div>
-    <p class="note">קוד: אות גדולה = 85 ומעלה · אות קטנה = 60–84 · מקף = מתחת ל־60 (ספים לדוגמה – לאשר עם שלמה). הקישו על כותרת למיון, ועל שם כדי לראות אותו במלואו. <span class="tag dup">כפול</span> = אותו שם הופיע יותר מפעם אחת.</p>
+    <table class="bands" aria-label="מפתח הקוד">
+      <thead><tr><th scope="col">אות</th><th scope="col">עיקרי מאוד</th><th scope="col">עיקרי</th><th scope="col">משני</th><th scope="col">פחות מועדף</th></tr></thead>
+      <tbody id="bandRows"></tbody>
+    </table>
+    <p class="note">קוד: <b>אות גדולה</b> = עיקרי / עיקרי מאוד · <b>אות קטנה</b> = משני · <b>מקף</b> = פחות מועדף. הספים שונים לכל אות, לפי טבלת "ריכוז תוצאות". הקישו על כותרת למיון, ועל שם כדי לראות אותו במלואו. <span class="tag dup">כפול</span> = אותו שם הופיע יותר מפעם אחת.</p>
   </section>
 
 </div></main>
@@ -390,8 +400,14 @@
 const WORKSHOP = "סדנת מנהלים · 16/11/26";
 const SHOW_SCORES_TO_PARTICIPANT = true;   // false: thank-you screen only, no score card
 const SHOW_CODE_TO_PARTICIPANT = false;    // agreed 16/11/26: participants see their 4 scores but not the code. Flip to show it.
-// ⚠ Hebrew type names: confirm with the workshop facilitator before shipping
-const TYPE_NAMES = {P:"מבצע", A:"מנהל", E:"יזם", I:"מאחד"};
+// Type names and score bands: from Shlomo's results key "ריכוז תוצאות" (20/11/26)
+const TYPE_NAMES = {P:"תפוקתי", A:"מינהלן", E:"יזם", I:"מתכלל"};
+// Lowest score of each band per letter: [משני, עיקרי, עיקרי מאוד]; below משני = פחות מועדף.
+// P: 20–67 / 68–81 / 82–89 / 90–160 · A: 20–82 / 83–96 / 97–104 / 105–160
+// E: 20–72 / 73–86 / 87–94 / 95–160 · I: 20–47 / 48–61 / 62–69 / 70–160
+const BANDS = {P:[68,82,90], A:[83,97,105], E:[73,87,95], I:[48,62,70]};
+const BAND_NAMES = ["פחות מועדף","משני","עיקרי","עיקרי מאוד"];
+const band = (t,v) => BANDS[t].filter(min=>v>=min).length;   // 0..3 → BAND_NAMES
 
 /* Questionnaire: [stem, P, A, E, I] — transcribed from שאלון אדיג'ס.PDF */
 const Q = [
@@ -493,7 +509,8 @@ function go(d){
   qi += d; tapLockUntil = Date.now() + 300; save(); renderQ(); window.scrollTo(0,0);
 }
 function score(ans){ const s={P:0,A:0,E:0,I:0}; ans.forEach(row=>row.forEach((t,r)=>s[TYPES[t]]+=POINTS[r])); return s; }
-function code(s){ return TYPES.map(t=> s[t]>=85 ? t : s[t]>=60 ? t.toLowerCase() : "-").join(""); }
+// Code: capital = עיקרי or עיקרי מאוד, small letter = משני, dash = פחות מועדף (each letter has its own bands)
+function code(s){ return TYPES.map(t=>{ const b = band(t,s[t]); return b>=2 ? t : b===1 ? t.toLowerCase() : "-"; }).join(""); }
 
 let sending = false;
 function submit(){
@@ -612,6 +629,9 @@ function renderHead(){
 function renderMod(){
   $("wsName2").textContent = WORKSHOP;
   $("printTitle").textContent = `${WORKSHOP} – תוצאות`;
+  $("bandRows").innerHTML = TYPES.map(t=>{ const [m1,m2,m3] = BANDS[t];
+    const r = (a,b) => `<td dir="ltr">${a}-${b}</td>`;   // ltr so ranges read 82-89 like the paper sheet
+    return `<tr><td><b>${t}</b> ${TYPE_NAMES[t]}</td>${r(m3,160)}${r(m2,m3-1)}${r(m1,m2-1)}${r(20,m1-1)}</tr>`; }).join("");
   $("barLive").textContent = `חי · ${hhmm()}`;
   renderRoster(); renderHead();
   const list = rows().slice().sort((a,b)=> (a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0) * sortDir);
@@ -673,7 +693,11 @@ function selfTest(){
     if (tot!==300 || TYPES.some(t=>s[t]<20||s[t]>160)){ fails.push(`random #${k}: ${JSON.stringify(s)}`); break; }
   }
   // 5. code thresholds
-  eq(code({P:85,A:84,E:60,I:59}), "Pae-", "code thresholds");
+  // 5. per-letter bands from the results key, checked at every boundary
+  eq(code({P:82,A:96,E:73,I:47}), "Pae-", "code bands (1)");
+  eq(code({P:81,A:97,E:72,I:48}), "pA-i", "code bands (2)");
+  eq(code({P:67,A:82,E:87,I:62}), "--EI", "code bands (3)");
+  eq([band("P",89),band("P",90),band("A",104),band("A",105),band("E",94),band("E",95),band("I",69),band("I",70)], [2,3,2,3,2,3,2,3], "very-primary bands");
   if (fails.length){ console.error("Self-test FAILED", fails);
     const m = document.querySelector(".mock"); m.style.background = "#8A1F11"; m.insertAdjacentText("beforeend", " · ⚠ בדיקה עצמית נכשלה (ראו קונסול)"); }
   else console.info("Self-test passed (scoring, display order, totals, thresholds)");
