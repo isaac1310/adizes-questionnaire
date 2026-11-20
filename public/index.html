@@ -254,6 +254,18 @@
 
 <main><div class="wrap">
 
+  <!-- 0a. Loading (live mode, while the workshop details arrive) -->
+  <section id="sLoading" class="hidden" aria-busy="true">
+    <h1 tabindex="-1" class="muted" style="font-size:20px;font-weight:700;margin-top:24px">טוען…</h1>
+  </section>
+
+  <!-- 0b. A link problem: unknown workshop, closed, offline, wrong moderator key, locked -->
+  <section id="sProblem" class="hidden">
+    <h1 id="probTitle" tabindex="-1">הקישור לא תקין</h1>
+    <p class="intro" id="probText"></p>
+    <button class="btn" id="probRetry" onclick="location.reload()">נסו שוב</button>
+  </section>
+
   <!-- 1. Welcome -->
   <section id="sWelcome">
     <span class="workshop" id="wsName"></span>
@@ -398,8 +410,15 @@
 
 <script>
 /* ---------- config ---------- */
-const WORKSHOP = "סדנת מנהלים · 16/11/26";
-const SHOW_SCORES_TO_PARTICIPANT = true;   // false: thank-you screen only, no score card
+// The Google Apps Script web app (Shlomo's Sheet). After the handover this becomes his deployment URL.
+const API = "https://script.google.com/macros/s/AKfycbw58fcEWjgEFWoIyg9_DQS6ZY7lC1lRJUeS6UaKAgd_OFWdQ23Qsu9fTnigzZGLE3IBJA/exec";
+// Links: participants ?w=<code> · moderator ?w=<code>#k=<key> (the key is after #, so it never reaches any server log)
+const WS_CODE = (new URLSearchParams(location.search).get("w") || "").trim().toLowerCase();
+const MOD_KEY = (new URLSearchParams(location.hash.slice(1)).get("k") || "").trim();
+const DEMO = !WS_CODE;                      // no workshop in the link → the design demo with sample data
+let WORKSHOP = DEMO ? "סדנת מנהלים · 16/11/26" : "";
+const SHOW_SCORES_TO_PARTICIPANT = true;   // demo default; live mode uses the workshop's "ציונים למשתתפים" checkbox
+let showScores = SHOW_SCORES_TO_PARTICIPANT;
 const SHOW_CODE_TO_PARTICIPANT = false;    // agreed 16/11/26: participants see their 4 scores but not the code. Flip to show it.
 // Type names and score bands: from Shlomo's results key "ריכוז תוצאות" (20/11/26)
 const TYPE_NAMES = {P:"תפוקתי", A:"מינהלן", E:"יזם", I:"מתכלל"};
@@ -441,22 +460,58 @@ const RANK_TXT = ["ראשון","שני","שלישי","רביעי"], RANK_ORD = [
 const PERM = [[2,3,1,0],[0,1,3,2],[3,0,2,1],[1,2,0,3],[1,2,0,3],[3,0,2,1],[0,1,3,2],[2,3,1,0],[3,0,2,1],[2,3,1,0],
               [1,2,0,3],[0,1,3,2],[0,1,3,2],[1,2,0,3],[2,3,1,0],[3,0,2,1],[2,3,1,0],[3,0,2,1],[0,1,3,2],[1,2,0,3]];
 
-let name = "", qi = 0, answers = Q.map(()=>[]), submitted = null, advTimer = null;
+let name = "", qi = 0, answers = Q.map(()=>[]), submitted = null, advTimer = null, startedAt = 0;
 let tapLockUntil = 0;   // after the row changes, ignore taps briefly so a fast tap doesn't land on the new row
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const hhmm = () => new Date().toTimeString().slice(0,5);
 
 /* Progress is kept on the phone so a reload / app switch doesn't lose answers */
-const STORE = "adizes:" + WORKSHOP;
-function save(){ try{ localStorage.setItem(STORE, JSON.stringify({name, qi, answers, submitted})); }catch(e){} }
+const STORE = "adizes:" + (DEMO ? "demo" : WS_CODE);
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify({name, qi, answers, submitted, startedAt})); }catch(e){} }
 function load(){ try{ const d = JSON.parse(localStorage.getItem(STORE)||"null");
-  if (d && d.answers && d.answers.length===Q.length){ ({name, qi, answers, submitted} = d); return true; } }catch(e){} return false; }
+  if (d && d.answers && d.answers.length===Q.length){ ({name, qi, answers, submitted} = d); startedAt = d.startedAt || 0; return true; } }catch(e){} return false; }
 
-const SCREENS = ["sWelcome","sQuestion","sConfirm","sDone","sModLogin","sMod"];
+/* ---------- talking to the Sheet ---------- */
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const BACKOFF = [0, 1500, 4000, 9000];      // weak signal: try 4 times over ~15 s, with a little random spread
+async function call(fetcher, tries){
+  let last = {ok:false, error:"offline"};
+  for (let i=0; i<tries; i++){
+    if (BACKOFF[i]) await sleep(BACKOFF[i] + Math.random()*800);
+    try{
+      const r = await fetcher();
+      const j = JSON.parse(await r.text());
+      if (j.ok || !j.retry) return j;         // a real answer (success, or a rejection worth showing)
+      last = j;                               // busy / server_error: try again
+    }catch(e){ last = {ok:false, error:"offline"}; }
+  }
+  return last;
+}
+// POST as text/plain on purpose: Apps Script does not answer CORS preflight requests
+const apiPost = (body, tries=4) => call(()=>fetch(API, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(body)}), tries);
+const apiGet = (query, tries=3) => call(()=>fetch(API + query), tries);
+
+const PROBLEMS = {
+  unknown_workshop: ["הקישור לא תקין", "בדקו שהעתקתם את כל הקישור, או בקשו קישור חדש ממנחה הסדנה."],
+  bad_workshop:     ["הקישור לא תקין", "בדקו שהעתקתם את כל הקישור, או בקשו קישור חדש ממנחה הסדנה."],
+  workshop_closed:  ["השאלון נסגר", "הסדנה הזו כבר לא מקבלת תשובות. לשאלות פנו למנחה הסדנה."],
+  offline:          ["אין חיבור", "לא הצלחנו להתחבר. בדקו את החיבור לאינטרנט ונסו שוב."],
+  server_error:     ["תקלה זמנית", "משהו השתבש אצלנו. נסו שוב בעוד דקה."],
+  bad_key:          ["הקישור למנחה לא תקין", "השתמשו בקישור המלא מהגיליון (תפריט שאלון אדיג'ס ← קישורים לסדנה קיימת)."],
+  locked:           ["הגישה ננעלה זמנית", "היו יותר מדי ניסיונות עם קישור שגוי. נסו שוב בעוד 15 דקות."],
+};
+function showProblem(err){
+  const [t, d] = PROBLEMS[err] || PROBLEMS.server_error;
+  $("probTitle").textContent = t; $("probText").textContent = d;
+  $("probRetry").classList.toggle("hidden", !["offline","server_error","busy"].includes(err) && PROBLEMS[err] !== undefined);
+  show("sProblem");
+}
+
+const SCREENS = ["sLoading","sProblem","sWelcome","sQuestion","sConfirm","sDone","sModLogin","sMod"];
 function show(id){
   SCREENS.forEach(s=>$(s).classList.toggle("hidden",s!==id));
-  document.body.classList.toggle("compact", id!=="sWelcome" && id!=="sModLogin");      // image header only on welcome + login
+  document.body.classList.toggle("compact", !["sWelcome","sModLogin","sProblem","sLoading"].includes(id));   // image header on entry screens
   document.body.classList.toggle("nofooter", id==="sQuestion" || id==="sConfirm");
   const mod = id==="sMod";
   $("barTitle").textContent = mod ? "תוצאות · מנחה" : "סגנונות החלטה";
@@ -465,7 +520,7 @@ function show(id){
   const h = $(id).querySelector("h1"); if (h) h.focus({preventScroll:true});           // screen readers land on the new screen
 }
 function checkName(){ $("startBtn").disabled = $("name").value.trim().length < 2; }
-function start(){ name = $("name").value.trim(); qi = 0; save(); show("sQuestion"); renderQ(); }
+function start(){ name = $("name").value.trim(); qi = 0; startedAt = Date.now(); save(); show("sQuestion"); renderQ(); }
 
 function renderQ(){
   const row = Q[qi], ans = answers[qi], n = ans.length;
@@ -513,25 +568,42 @@ function score(ans){ const s={P:0,A:0,E:0,I:0}; ans.forEach(row=>row.forEach((t,
 // Code: capital = עיקרי or עיקרי מאוד, small letter = משני, dash = פחות מועדף (each letter has its own bands)
 function code(s){ return TYPES.map(t=>{ const b = band(t,s[t]); return b>=2 ? t : b===1 ? t.toLowerCase() : "-"; }).join(""); }
 
+const SEND_ERRORS = {
+  offline: "לא הצלחנו לשלוח – כנראה אין חיבור לאינטרנט. התשובות שמורות בטלפון, נסו שוב בעוד רגע.",
+  server_error: "תקלה זמנית בשליחה. התשובות שמורות בטלפון, נסו שוב בעוד דקה.",
+  busy: "המערכת עמוסה כרגע. התשובות שמורות בטלפון, נסו שוב בעוד רגע.",
+  workshop_closed: "השאלון לסדנה הזו נסגר, ולכן לא ניתן לשלוח. פנו למנחה הסדנה.",
+  workshop_full: "הסדנה קיבלה כבר את מספר התשובות המרבי. פנו למנחה הסדנה.",
+  bad_name: "השם לא תקין (2–40 תווים). חזרו לתחילת השאלון ותקנו אותו.",
+  bad_answers: "חסרות תשובות. חזרו לתשובות ובדקו שכל 20 השורות מלאות.",
+};
 let sending = false;
-function submit(){
+async function submit(){
   if (sending) return;                       // no double submit
   const btn = $("sendBtn"); $("sendErr").classList.add("hidden");
   sending = true; btn.disabled = true; btn.classList.add("busy"); btn.textContent = "שולח…";
-  // Mockup: fake network call. Fails when the phone is offline, so the error state can be tried.
-  setTimeout(()=>{
-    sending = false; btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "שליחה";
-    if (!navigator.onLine){ $("sendErr").classList.remove("hidden"); return; }
-    const s = score(answers);
-    submitted = {name, ...s, code:code(s), t:hhmm()};
-    save(); renderDone();
-  }, 900);
+  let r;
+  if (DEMO){                                 // demo: fake call; fails when the phone is offline so the error state can be tried
+    await sleep(900);
+    r = navigator.onLine ? {ok:true, scores:score(answers)} : {ok:false, error:"offline"};
+  } else {
+    r = await apiPost({action:"submit", workshop:WS_CODE, name, answers, displayOrder:PERM,
+                       seconds: startedAt ? Math.round((Date.now()-startedAt)/1000) : null});
+  }
+  sending = false; btn.disabled = false; btn.classList.remove("busy"); btn.textContent = "שליחה";
+  if (!r.ok){ $("sendErr").textContent = SEND_ERRORS[r.error] || SEND_ERRORS.server_error; $("sendErr").classList.remove("hidden"); return; }
+  // scores come from the Sheet (null when the workshop hides them from participants)
+  if (!DEMO) showScores = !!r.scores;
+  const s = r.scores || score(answers);
+  submitted = {name, ...s, code:code(s), t:hhmm(), showScores};
+  save(); renderDone();
 }
 function renderDone(){
   const s = submitted, first = name.split(" ")[0];
+  if (typeof s.showScores === "boolean") showScores = s.showScores;
   $("doneTitle").textContent = `תודה, ${first}!`;
   $("notMe").textContent = `לא ${first}? משתתף/ת חדש/ה בטלפון הזה`;
-  $("doneCard").classList.toggle("hidden", !SHOW_SCORES_TO_PARTICIPANT);
+  $("doneCard").classList.toggle("hidden", !showScores);
   $("doneCode").textContent = SHOW_CODE_TO_PARTICIPANT ? s.code : "";
   const best = Math.max(...TYPES.map(t=>s[t]));
   $("doneScores").innerHTML = TYPES.map(t=>`<div class="score${s[t]===best?" top":""}">`+
@@ -548,14 +620,20 @@ const MOCK = MOCK_NAMES.map((n,i)=>{
   const s = score(ans); return {name:n, ...s, code:code(s), t:`09:${String(12+i*2).padStart(2,"0")}`};
 });
 let sortK = "t", sortDir = 1;
-function rows(){ return submitted ? [...MOCK, submitted] : MOCK; }
+let LIVE = null, liveAt = "";                 // live moderator data from the Sheet
+function rows(){
+  const list = DEMO ? (submitted ? [...MOCK, submitted] : MOCK) : (LIVE ? LIVE.submissions : []);
+  return list.map((p,i)=>({...p, i}));        // i = arrival order, used for "sort by time" across days
+}
+const shortTime = t => String(t).replace(/^(\d\d\/\d\d)\/\d\d /, "$1 ");   // 20/11/26 14:22 → 20/11 14:22
+const FLAG_TXT = {fast:"מילא/ה מהר מאוד (פחות מ־2 דקות)", "same-spot":"הקיש/ה באותו מקום בכל השורות"};
 
 /* ---------- roster: expected participants vs. who submitted ---------- */
-const ROSTER_KEY = "adizes-roster:" + WORKSHOP;
-// Mockup default: most of the mock submitters, plus 3 who haven't filled it in and one spelling variant
-let roster = ["דנה כהן","יוסי לוי","מיכל אברהם","אבי מזרחי","נועה פרץ","רון ביטון","שירה דהן","עומר אזולאי",
-              "טל פרידמן","גיל שפירא","הילה כץ","רונית גבאי","משה אלון","יעל ברק","אלכס רוזנברג"];
-try{ const r = JSON.parse(localStorage.getItem(ROSTER_KEY)||"null"); if (Array.isArray(r)) roster = r; }catch(e){}
+const ROSTER_KEY = "adizes-roster:demo";
+// Demo default: most of the mock submitters, plus 3 who haven't filled it in and one spelling variant. Live: from the Sheet.
+let roster = DEMO ? ["דנה כהן","יוסי לוי","מיכל אברהם","אבי מזרחי","נועה פרץ","רון ביטון","שירה דהן","עומר אזולאי",
+              "טל פרידמן","גיל שפירא","הילה כץ","רונית גבאי","משה אלון","יעל ברק","אלכס רוזנברג"] : [];
+if (DEMO) try{ const r = JSON.parse(localStorage.getItem(ROSTER_KEY)||"null"); if (Array.isArray(r)) roster = r; }catch(e){}
 const norm = s => s.replace(/[׳'"`.,\-־]/g," ").replace(/\s+/g," ").trim();
 const isExact = (a,b) => norm(a)===norm(b);
 /* "Maybe the same person": the first names match or one starts with the other (דני/דניאל, אלכס/אלכסנדרה)
@@ -601,9 +679,14 @@ function editRoster(){
   $("rosterTxt").value = roster.join("\n");
   $("rosterEdit").classList.remove("hidden"); $("rosterActions").classList.add("hidden"); $("rosterTxt").focus();
 }
-function saveRoster(){
-  roster = [...new Set($("rosterTxt").value.split("\n").map(s=>s.trim()).filter(Boolean))];
-  try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); }catch(e){}
+async function saveRoster(){
+  const list = [...new Set($("rosterTxt").value.split("\n").map(s=>s.trim()).filter(Boolean))];
+  if (DEMO){ roster = list; try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); }catch(e){} return renderMod(); }
+  const btn = $("rosterEdit").querySelector(".btn"); btn.disabled = true; btn.textContent = "שומר…";
+  const r = await apiPost({action:"saveRoster", workshop:WS_CODE, key:MOD_KEY, expected:list});
+  btn.disabled = false; btn.textContent = "שמירת הרשימה";
+  if (!r.ok){ alert(r.error==="offline" ? "אין חיבור – הרשימה לא נשמרה. נסו שוב." : "הרשימה לא נשמרה (" + r.error + ")."); return; }
+  roster = r.expected; if (LIVE) LIVE.workshop.expected = r.expected;   // saved in the Sheet, cleaned by the server
   renderMod();
 }
 function copyMissing(){
@@ -633,17 +716,19 @@ function renderMod(){
   $("bandRows").innerHTML = TYPES.map(t=>{ const [m1,m2,m3] = BANDS[t];
     const r = (a,b) => `<td dir="ltr">${a}-${b}</td>`;   // ltr so ranges read 82-89 like the paper sheet
     return `<tr><td><b>${t}</b> ${TYPE_NAMES[t]}</td>${r(m3,160)}${r(m2,m3-1)}${r(m1,m2-1)}${r(20,m1-1)}</tr>`; }).join("");
-  $("barLive").textContent = `חי · ${hhmm()}`;
+  $("barLive").textContent = `חי · ${DEMO ? hhmm() : liveAt}`;
   renderRoster(); renderHead();
-  const list = rows().slice().sort((a,b)=> (a[sortK]>b[sortK]?1:a[sortK]<b[sortK]?-1:0) * sortDir);
+  const k = sortK==="t" ? "i" : sortK;
+  const list = rows().slice().sort((a,b)=> (a[k]>b[k]?1:a[k]<b[k]?-1:0) * sortDir);
   $("tSubs").textContent = list.length;
   if (!list.length){ $("modRows").innerHTML = `<tr><td colspan="5" class="empty">עדיין אין הגשות – שתפו את הקישור עם המשתתפים.</td></tr>`; return; }
   const seen = {}; list.forEach(p=>{ const k=norm(p.name); seen[k]=(seen[k]||0)+1; });
   $("modRows").innerHTML = list.map(p=>{
     const max = Math.max(p.P,p.A,p.E,p.I), dup = seen[norm(p.name)]>1, off = roster.length && !onRoster(p.name);
     return `<tr><td><div class="who"><button class="nmbtn" title="${esc(p.name)}" aria-expanded="false" onclick="toggleName(this)">${esc(p.name)}</button>`+
-      `${dup?'<span class="tag dup">כפול</span>':''}${off?'<span class="tag off">לא ברשימה</span>':''}</div>`+
-      `<div class="sub2"><code dir="ltr">${p.code}</code> · ${p.t}</div></td>`+
+      `${dup?'<span class="tag dup">כפול</span>':''}${off?'<span class="tag off">לא ברשימה</span>':''}`+
+      `${(p.flags||[]).length?`<span class="tag dup" title="${esc(p.flags.map(f=>FLAG_TXT[f]||f).join(" · "))}">חשוד</span>`:''}</div>`+
+      `<div class="sub2"><code dir="ltr">${esc(p.code)}</code> · ${esc(shortTime(p.t))}</div></td>`+
       TYPES.map(t=>`<td${p[t]===max?' class="top"':''}>${p[t]}</td>`).join("")+`</tr>`;
   }).join("");
 }
@@ -654,8 +739,8 @@ function modEnter(){
 }
 function exportCsv(){
   const q = v => `"${String(v).replace(/"/g,'""')}"`;     // quote every field, so commas/quotes in names don't break columns
-  const head = ["שם","P","A","E","I","קוד","שעה"];
-  const body = rows().map(p=>[p.name,p.P,p.A,p.E,p.I,p.code,p.t].map(q).join(","));
+  const head = ["שם","P","A","E","I","קוד","שעה","סימונים"];
+  const body = rows().map(p=>[p.name,p.P,p.A,p.E,p.I,p.code,p.t,(p.flags||[]).map(f=>FLAG_TXT[f]||f).join(" · ")].map(q).join(","));
   const blob = new Blob(["﻿"+[head.map(q).join(","),...body].join("\r\n")],{type:"text/csv;charset=utf-8"});
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
   a.download = `adizes-results-${new Date().toISOString().slice(0,10)}.csv`; a.click();
@@ -705,9 +790,50 @@ function selfTest(){
   return fails;
 }
 
-$("wsName").textContent = WORKSHOP;
-selfTest();
-load(); resume();
+/* ---------- live moderator ---------- */
+async function refreshMod(){
+  const r = await apiPost({action:"results", workshop:WS_CODE, key:MOD_KEY}, 2);
+  if (!r.ok) return r;
+  LIVE = r; liveAt = hhmm();
+  WORKSHOP = r.workshop.name + (r.workshop.date ? " · " + r.workshop.date : "");
+  roster = r.workshop.expected || [];
+  return r;
+}
+async function bootModerator(){
+  show("sLoading");
+  const r = await refreshMod();
+  if (!r.ok) return showProblem(r.error);
+  show("sMod"); renderMod();
+  // refresh every 30 s, only while the page is visible and the names list isn't being edited
+  setInterval(async ()=>{
+    if (document.visibilityState!=="visible" || $("sMod").classList.contains("hidden") || !$("rosterEdit").classList.contains("hidden")) return;
+    const r2 = await refreshMod();
+    if (r2.ok) renderMod(); else $("barLive").textContent = "אין חיבור · " + liveAt;
+  }, 30000);
+}
+
+/* ---------- start ---------- */
+async function boot(){
+  selfTest();
+  if (DEMO){ $("wsName").textContent = WORKSHOP; load(); resume(); return; }
+  document.querySelector(".mock").classList.add("hidden");       // the demo switcher is not part of the real site
+  if (MOD_KEY) return bootModerator();
+  load();
+  show("sLoading");
+  const r = await apiGet(`?action=workshop&code=${encodeURIComponent(WS_CODE)}`);
+  if (!r.ok){
+    if (submitted && r.error==="offline") return renderDone();    // already sent: show it even offline
+    return showProblem(r.error);
+  }
+  WORKSHOP = r.workshop.name + (r.workshop.date ? " · " + r.workshop.date : "");
+  showScores = r.workshop.showScores;
+  $("wsName").textContent = WORKSHOP;
+  if (!r.workshop.open && !submitted) return showProblem("workshop_closed");
+  resume();
+}
+// The moderator key lives after # — editing only that part doesn't reload a page, so reload explicitly
+window.addEventListener("hashchange", () => location.reload());
+boot();
 </script>
 </body>
 </html>
